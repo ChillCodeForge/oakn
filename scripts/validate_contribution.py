@@ -26,6 +26,8 @@ def main() -> None:
         changes.append((status, path))
     path = validate_contribution_paths(changes)
     claim_path = arguments.contribution / path
+    if claim_path.is_symlink():
+        raise ValidationError("added claim file must not be a symlink")
     if not claim_path.is_file():
         raise ValidationError("added claim file is absent from contribution")
     ClaimValidator().validate(json.loads(claim_path.read_text()))

@@ -1,6 +1,9 @@
 import hashlib
+import subprocess
+import tempfile
 import unittest
 from datetime import date
+from pathlib import Path
 
 from oakn.validation import ClaimValidator, ValidationError, validate_contribution_paths
 
@@ -90,6 +93,39 @@ class ContributionSecurityTests(unittest.TestCase):
         )
         with self.assertRaises(ValidationError):
             validate_contribution_paths([("A", ".github/workflows/validate.yml")])
+        with self.assertRaises(ValidationError):
+            validate_contribution_paths(
+                [("A", "knowledge/claims/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.json")]
+            )
+
+    def test_contribution_validator_rejects_a_symlink_claim_file(self) -> None:
+        repository_root = Path(__file__).parents[1]
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary_path = Path(temporary_directory)
+            claim_directory = temporary_path / "contribution" / "knowledge" / "claims"
+            claim_directory.mkdir(parents=True)
+            (temporary_path / "target.json").write_text("{}")
+            (claim_directory / "33333333-3333-4333-8333-333333333333.json").symlink_to(
+                temporary_path / "target.json"
+            )
+            changes = temporary_path / "changes.txt"
+            changes.write_text("A\tknowledge/claims/33333333-3333-4333-8333-333333333333.json\n")
+
+            result = subprocess.run(
+                [
+                    "python3",
+                    str(repository_root / "scripts" / "validate_contribution.py"),
+                    str(temporary_path / "contribution"),
+                    "--changes",
+                    str(changes),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("must not be a symlink", result.stderr)
 
 
 if __name__ == "__main__":

@@ -26,6 +26,31 @@ If a claim PR is rejected as a control-plane change, inspect the changed-path
 list first. A claim PR with more than the one new claim JSON file must be split
 before it can pass the data-only gate.
 
+## Recovering a missing validation check
+
+Maintainers can rerun validation when a claim PR is still open but its required
+`validate` check was never reported. In Actions, run **Recover claim
+validation** with the `main` branch selected, the PR number, and the exact
+40-character head SHA shown on that PR. The workflow refuses a closed PR, a PR
+not targeting this repository's `main`, a changed head or base, or a run
+dispatched from a stale/non-main revision.
+
+The recovery fetches the validator from `main`, compares the PR head with its
+base, and runs the normal contribution validator against the fetched PR tree as
+data. It accepts exactly one newly added `knowledge/claims/<uuid>.json` file;
+it does not run code from the PR. Only after successful validation does a
+separate job use the built-in GitHub Actions token to create a `validate` check
+on that exact head SHA. A failed, stale, or non-claim contribution creates no
+successful required check. No repository secrets, branch-protection settings,
+review requirements, or PR contents are changed; only the workflow's ephemeral
+GitHub Actions token is used for API access.
+
+After a successful run, verify the `validate` check is successful on the same
+head SHA. The main-branch required-check policy must continue to show
+`validate` from GitHub Actions app `15368`; the workflow does not modify that
+policy. Do not use recovery to validate code changes or to override a failed
+check.
+
 ## 1. Pick evidence that is actually version-provable
 
 Every claim binds a package version to a manifest file's content hash
