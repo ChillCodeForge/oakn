@@ -13,3 +13,17 @@ class WorkflowConfigurationTests(unittest.TestCase):
         self.assertIn("  pull_request_review:", workflow)
         self.assertNotIn("\n  push:", workflow)
         self.assertNotIn("ignore-push:", workflow)
+
+    def test_validation_workflow_supports_manual_main_dispatch_and_ready_prs(self) -> None:
+        workflow = WORKFLOW.read_text()
+
+        self.assertIn("ready_for_review", workflow)
+        self.assertIn("  workflow_dispatch:", workflow)
+        self.assertIn("      pr_number:", workflow)
+        self.assertIn("      expected_head_sha:", workflow)
+        self.assertIn('GITHUB_REF" != "refs/heads/main"', workflow)
+        self.assertIn("head.sha == $head", workflow)
+        self.assertIn("report-manual-validation:", workflow)
+        self.assertIn("checks: write", workflow)
+        self.assertIn('name: "validate"', workflow)
+        self.assertIn(".app.id == 15368", workflow)
