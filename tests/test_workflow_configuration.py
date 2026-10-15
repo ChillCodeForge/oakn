@@ -9,6 +9,7 @@ class WorkflowConfigurationTests(unittest.TestCase):
         workflow = WORKFLOW.read_text()
 
         self.assertIn("name: Validate pull request boundary", workflow)
+        self.assertNotIn("administration:", workflow)
         self.assertIn("  pull_request_target:", workflow)
         self.assertIn("  pull_request_review:", workflow)
         self.assertNotIn("\n  push:", workflow)
