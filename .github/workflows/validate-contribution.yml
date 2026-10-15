@@ -2,11 +2,21 @@ name: Validate pull request boundary
 
 on:
   pull_request_target:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, ready_for_review]
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, ready_for_review]
   pull_request_review:
     types: [submitted, edited, dismissed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Open pull request number
+        required: true
+        type: number
+      expected_head_sha:
+        description: Exact 40-character PR head SHA to validate
+        required: true
+        type: string
 
 permissions:
   administration: read
@@ -15,17 +25,76 @@ permissions:
 
 jobs:
   validate:
+    outputs:
+      base_sha: ${{ steps.snapshot.outputs.base_sha }}
     if: >-
       github.event_name == 'pull_request_target' ||
       github.event_name == 'pull_request_review' ||
+      github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'pull_request' &&
        github.event.pull_request.user.login == github.repository_owner)
     runs-on: ubuntu-latest
     steps:
+      - name: Resolve and pin the pull-request snapshot
+        id: snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          REPOSITORY: ${{ github.repository }}
+          EVENT_PR_NUMBER: ${{ github.event.pull_request.number }}
+          EVENT_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          EVENT_PR_SHA: ${{ github.event.pull_request.head.sha }}
+          EVENT_AUTHOR: ${{ github.event.pull_request.user.login }}
+          INPUT_PR_NUMBER: ${{ inputs.pr_number }}
+          EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+              echo "Manual validation must run from refs/heads/main." >&2
+              exit 1
+            fi
+            if [[ ! "$INPUT_PR_NUMBER" =~ ^[1-9][0-9]*$ ]]; then
+              echo "Pull request number must be a positive integer." >&2
+              exit 1
+            fi
+            if [[ ! "$EXPECTED_HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "Expected head SHA must be a 40-character lowercase SHA-1." >&2
+              exit 1
+            fi
+            gh api "repos/${REPOSITORY}/pulls/${INPUT_PR_NUMBER}" > "$RUNNER_TEMP/pull-request.json"
+            jq -e \
+              --arg repository "$REPOSITORY" \
+              --arg head "$EXPECTED_HEAD_SHA" \
+              --argjson number "$INPUT_PR_NUMBER" \
+              '.number == $number and
+               .state == "open" and
+               .base.ref == "main" and
+               .base.repo.full_name == $repository and
+               .head.sha == $head' \
+              "$RUNNER_TEMP/pull-request.json" > /dev/null
+            base_sha="$(jq -r '.base.sha' "$RUNNER_TEMP/pull-request.json")"
+            if [[ "$base_sha" != "$GITHUB_SHA" ]]; then
+              echo "Pull request base is not the dispatched main revision; dispatch again." >&2
+              exit 1
+            fi
+            author="$(jq -r '.user.login' "$RUNNER_TEMP/pull-request.json")"
+            pr_number="$INPUT_PR_NUMBER"
+            pr_sha="$EXPECTED_HEAD_SHA"
+          else
+            base_sha="$EVENT_BASE_SHA"
+            author="$EVENT_AUTHOR"
+            pr_number="$EVENT_PR_NUMBER"
+            pr_sha="$EVENT_PR_SHA"
+          fi
+          printf 'base_sha=%s\n' "$base_sha" >> "$GITHUB_OUTPUT"
+          printf 'pr_number=%s\n' "$pr_number" >> "$GITHUB_OUTPUT"
+          printf 'pr_sha=%s\n' "$pr_sha" >> "$GITHUB_OUTPUT"
+          printf 'author=%s\n' "$author" >> "$GITHUB_OUTPUT"
       - name: Fetch trusted validator and pull-request data
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          PR_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_SHA: ${{ steps.snapshot.outputs.base_sha }}
+          PR_SHA: ${{ steps.snapshot.outputs.pr_sha }}
           REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
@@ -51,12 +120,12 @@ jobs:
             echo "kind=non-knowledge" >> "$GITHUB_OUTPUT"
           fi
       - name: Fetch maintainer reviews for external control-plane pull request
-        if: steps.contribution.outputs.kind == 'non-knowledge' && github.event.pull_request.user.login != github.repository_owner
+        if: steps.contribution.outputs.kind == 'non-knowledge' && steps.snapshot.outputs.author != github.repository_owner
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ steps.snapshot.outputs.pr_number }}
+          HEAD_SHA: ${{ steps.snapshot.outputs.pr_sha }}
         run: |
           set -euo pipefail
           gh api --paginate --slurp \
@@ -94,8 +163,70 @@ jobs:
             --collaborators "$RUNNER_TEMP/collaborators.json" \
             --head-sha "$HEAD_SHA"
       - name: Validate trusted control-plane pull request without secrets
-        if: steps.contribution.outputs.kind == 'non-knowledge' && (github.event.pull_request.user.login == github.repository_owner || success())
+        if: steps.contribution.outputs.kind == 'non-knowledge' && (steps.snapshot.outputs.author == github.repository_owner || success())
         working-directory: ${{ runner.temp }}/pull-request
         run: |
           python3 -m pip install .
           python3 -m unittest discover -s tests -v
+
+  report-manual-validation:
+    if: github.event_name == 'workflow_dispatch'
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      pull-requests: read
+    steps:
+      - name: Recheck the exact validated pull-request snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
+          VALIDATED_BASE_SHA: ${{ needs.validate.outputs.base_sha }}
+        run: |
+          set -euo pipefail
+          gh api "repos/${REPOSITORY}/pulls/${PR_NUMBER}" > "$RUNNER_TEMP/pull-request.json"
+          jq -e \
+            --arg repository "$REPOSITORY" \
+            --arg head "$EXPECTED_HEAD_SHA" \
+            --arg base "$VALIDATED_BASE_SHA" \
+            '.state == "open" and
+             .base.ref == "main" and
+             .base.sha == $base and
+             .base.repo.full_name == $repository and
+             .head.sha == $head' \
+            "$RUNNER_TEMP/pull-request.json" > /dev/null
+
+      - name: Report the successful validation on the exact pull-request head
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
+        run: |
+          set -euo pipefail
+          jq -n \
+            --arg head "$EXPECTED_HEAD_SHA" \
+            --arg external_id "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            '{
+              name: "validate",
+              head_sha: $head,
+              status: "completed",
+              conclusion: "success",
+              external_id: $external_id,
+              output: {
+                title: "Pull request validation passed",
+                summary: "The trusted main-branch validator accepted this exact pull-request snapshot."
+              }
+            }' > "$RUNNER_TEMP/check-run.json"
+          gh api "repos/${REPOSITORY}/check-runs" \
+            --method POST \
+            --input "$RUNNER_TEMP/check-run.json" > "$RUNNER_TEMP/created-check.json"
+          jq -e \
+            --arg head "$EXPECTED_HEAD_SHA" \
+            '.name == "validate" and
+             .head_sha == $head and
+             .app.id == 15368 and
+             .status == "completed" and
+             .conclusion == "success"' \
+            "$RUNNER_TEMP/created-check.json" > /dev/null

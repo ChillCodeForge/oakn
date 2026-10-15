@@ -83,3 +83,17 @@ class WorkflowConfigurationTests(unittest.TestCase):
             validate_pull_request(pull_request, "someone/else", 40, "b" * 40)
         with self.assertRaises(ValueError):
             validate_pull_request(pull_request, "RoYaL69/oakn", 40, "not-a-sha")
+
+    def test_validation_workflow_supports_manual_main_dispatch_and_ready_prs(self) -> None:
+        workflow = WORKFLOW.read_text()
+
+        self.assertIn("ready_for_review", workflow)
+        self.assertIn("  workflow_dispatch:", workflow)
+        self.assertIn("      pr_number:", workflow)
+        self.assertIn("      expected_head_sha:", workflow)
+        self.assertIn('GITHUB_REF" != "refs/heads/main"', workflow)
+        self.assertIn("head.sha == $head", workflow)
+        self.assertIn("report-manual-validation:", workflow)
+        self.assertIn("checks: write", workflow)
+        self.assertIn('name: "validate"', workflow)
+        self.assertIn(".app.id == 15368", workflow)
