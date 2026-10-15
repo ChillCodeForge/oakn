@@ -74,6 +74,10 @@ jobs:
                .head.sha == $head' \
               "$RUNNER_TEMP/pull-request.json" > /dev/null
             base_sha="$(jq -r '.base.sha' "$RUNNER_TEMP/pull-request.json")"
+            if [[ "$base_sha" != "$GITHUB_SHA" ]]; then
+              echo "Pull request base is not the dispatched main revision; dispatch again." >&2
+              exit 1
+            fi
             author="$(jq -r '.user.login' "$RUNNER_TEMP/pull-request.json")"
             pr_number="$INPUT_PR_NUMBER"
             pr_sha="$EXPECTED_HEAD_SHA"
