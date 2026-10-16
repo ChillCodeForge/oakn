@@ -16,6 +16,18 @@ PYTHONPATH=src python3 -m oakn.cli record-outcome <claim-id> --index local-data/
 PYTHONPATH=src python3 -m oakn.mcp  # explicit stdio MCP server; no Hermes config changes
 ```
 
+GitHub Actions runs the unit and integration suite on Python 3.12, 3.13, and
+3.14 for pull requests and pushes to `main`. A separate quality job checks
+Ruff linting and formatting plus Mypy types. Run the same checks locally with:
+
+```sh
+python3 -m pip install -e . mypy ruff
+python3 -m unittest discover -s tests -v
+ruff check .
+ruff format --check .
+mypy src
+```
+
 The MCP exposes `resolve_project`, `search`, `get`, `contribute`, `record_outcome`,
 `sync`, and `validate_candidate`. `search(query, purl, version, topic=None)`
 takes the package purl with or without its version (`pkg:npm/p-limit` or
@@ -53,13 +65,12 @@ OAKN distinguishes between two kinds of pull requests:
   the file as data, validates its public evidence and schema, and never executes
   contribution code.
 - **Control-plane PRs** change trusted files such as workflows, schemas,
-  validators, scripts, source code or policies. External contributors may
-  propose these changes, but the trusted test path runs only after two
-  independent collaborators with administrator, maintainer or write permission
-  approve the exact current commit. A later `CHANGES_REQUESTED` review or a new
-  commit invalidates those approvals. The designated code owner `@RoYaL69`
-  instead runs the trusted tests directly; they do not execute pull-request
-  code or expose secrets.
+  validators, scripts, source code or policies. Repository collaborators with
+  administrator, maintainer or write permission can run the trusted test path
+  directly. External contributors may propose these changes, but the trusted
+  tests run only after two independent collaborators approve the exact current
+  commit. A later `CHANGES_REQUESTED` review or a new commit invalidates those
+  approvals.
 
 Control-plane tests run in an isolated job without repository secrets or write
 tokens. The `validate` check must pass before merging, and protected paths also

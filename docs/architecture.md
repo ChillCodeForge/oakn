@@ -15,9 +15,10 @@ executing them. Non-data pull requests follow the separate no-secrets
 control-plane path and require the configured approval gate. Branch protection
 and CODEOWNERS are documented as required repository settings because
 GitHub cannot make a repository file self-protecting without a protected default
-branch. External control-plane pull requests require two independent approvals
-from collaborators with write, maintain, or admin permission for the current
-commit before the trusted test path runs. The workflow uses only GitHub API
+branch. Control-plane pull requests from collaborators with write, maintain, or
+admin permission run the trusted test path directly. Other contributors require
+two independent collaborator approvals for the current commit before the trusted
+test path runs. The workflow uses only GitHub API
 metadata and never exposes secrets to the pull-request code.
 
 ## Core loop
@@ -71,8 +72,8 @@ metadata and never exposes secrets to the pull-request code.
 - Control-plane changes from outside contributors remain untrusted until two
   independent trusted collaborators approve the exact current commit. A later
   approval, a non-maintainer approval, or an approval followed by a
-  `CHANGES_REQUESTED` review does not satisfy the gate. The designated code owner
-  `@RoYaL69` follows the trusted test path directly instead of the external
+  `CHANGES_REQUESTED` review does not satisfy the gate. Trusted collaborators
+  with write-level access follow the test path directly instead of the external
   approval gate.
 
 ## Deliberate MVP limits

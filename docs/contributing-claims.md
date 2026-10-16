@@ -13,12 +13,12 @@ Public claim contributions and trusted code changes follow different paths:
   workflow edits or source changes in the same PR. The contribution validator
   checks the file as untrusted data and does not execute code from the branch.
 - A **control-plane PR** changes trusted paths such as `.github/`, `scripts/`,
-  `src/`, `schemas/` or repository policy. Anyone may propose one, but external
-  control-plane PRs need two independent approvals from collaborators with
-  administrator, maintainer or write permission. Approvals must target the
-  current commit; new commits or a later `CHANGES_REQUESTED` review require
-  approval again. The designated code owner `@RoYaL69` runs the trusted tests
-  directly without the external-approval gate.
+  `src/`, `schemas/` or repository policy. Collaborators with administrator,
+  maintainer or write permission run the trusted tests directly without the
+  external-approval gate. Other contributors may propose control-plane changes,
+  but the tests require two independent collaborator approvals for the current
+  commit. New commits or a later `CHANGES_REQUESTED` review require approval
+  again.
 - Control-plane validation runs without repository secrets and without write
   tokens. A green `validate` check means the relevant path passed the trusted
   boundary; it does not replace required CODEOWNER review.
