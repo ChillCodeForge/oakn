@@ -412,6 +412,13 @@ def validate_contribution_paths(changes: Iterable[tuple[str, str]]) -> str:
     if len(changes) != 1:
         raise ValidationError("a contribution must change exactly one claim data file")
     status, path = changes[0]
-    if status != "A" or not re.fullmatch(r"knowledge/claims/[0-9a-f-]{36}\.json", path):
+    match = re.fullmatch(r"knowledge/claims/([0-9a-f-]{36})\.json", path)
+    if status != "A" or match is None:
+        raise ValidationError("contributions may only add knowledge/claims/<uuid>.json")
+    try:
+        is_canonical_uuid = str(uuid.UUID(match.group(1))) == match.group(1)
+    except ValueError:
+        is_canonical_uuid = False
+    if not is_canonical_uuid:
         raise ValidationError("contributions may only add knowledge/claims/<uuid>.json")
     return path

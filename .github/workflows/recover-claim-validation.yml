@@ -1,0 +1,148 @@
+name: Recover claim validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Open claim pull request number
+        required: true
+        type: number
+      expected_head_sha:
+        description: Exact 40-character PR head SHA to validate
+        required: true
+        type: string
+
+permissions: {}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      base_sha: ${{ steps.prepare.outputs.base_sha }}
+    steps:
+      - name: Fetch trusted validator from current main
+        env:
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "Recovery must run from refs/heads/main." >&2
+            exit 1
+          fi
+          git init "$RUNNER_TEMP/trusted"
+          git -C "$RUNNER_TEMP/trusted" remote add origin \
+            "https://github.com/${REPOSITORY}.git"
+          git -C "$RUNNER_TEMP/trusted" fetch --no-tags --depth=1 origin refs/heads/main
+          trusted_sha="$(git -C "$RUNNER_TEMP/trusted" rev-parse FETCH_HEAD)"
+          if [[ "$trusted_sha" != "$GITHUB_SHA" ]]; then
+            echo "main moved since dispatch; dispatch again from the current main." >&2
+            exit 1
+          fi
+          git -C "$RUNNER_TEMP/trusted" checkout --detach "$trusted_sha"
+
+      - name: Install trusted validator dependencies
+        run: python3 -m pip install 'defusedxml==0.7.1' 'requests==2.34.2' 'univers==32.0.1'
+
+      - name: Fetch and pin the untrusted PR contribution
+        id: prepare
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
+        run: |
+          set -euo pipefail
+          python3 "$RUNNER_TEMP/trusted/scripts/prepare_claim_validation_recovery.py" \
+            --repository "$REPOSITORY" \
+            --pr-number "$PR_NUMBER" \
+            --expected-head-sha "$EXPECTED_HEAD_SHA" \
+            --trusted-root "$RUNNER_TEMP/trusted" \
+            --contribution "$RUNNER_TEMP/contribution" \
+            --changes-file "$RUNNER_TEMP/changes.txt" \
+            --output-file "$GITHUB_OUTPUT"
+
+      - name: Validate the claim as untrusted data
+        run: |
+          set -euo pipefail
+          python3 "$RUNNER_TEMP/trusted/scripts/validate_contribution.py" \
+            "$RUNNER_TEMP/contribution" \
+            --changes "$RUNNER_TEMP/changes.txt"
+
+  report:
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      pull-requests: read
+    steps:
+      - name: Recheck the exact validated PR snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
+          VALIDATED_BASE_SHA: ${{ needs.validate.outputs.base_sha }}
+        run: |
+          set -euo pipefail
+          gh api "repos/${REPOSITORY}/pulls/${PR_NUMBER}" > "$RUNNER_TEMP/pull-request.json"
+          jq -e \
+            --arg repository "$REPOSITORY" \
+            --arg head "$EXPECTED_HEAD_SHA" \
+            --arg base "$VALIDATED_BASE_SHA" \
+            '.state == "open" and
+             .base.ref == "main" and
+             .base.sha == $base and
+             .base.repo.full_name == $repository and
+             .head.sha == $head' \
+            "$RUNNER_TEMP/pull-request.json" > /dev/null
+
+      - name: Create and verify the required validate check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
+        run: |
+          set -euo pipefail
+          jq -n \
+            --arg head "$EXPECTED_HEAD_SHA" \
+            --arg external_id "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            '{
+              name: "validate",
+              head_sha: $head,
+              status: "completed",
+              conclusion: "success",
+              external_id: $external_id,
+              output: {
+                title: "Claim validation passed",
+                summary: "The trusted main-branch contribution validator accepted this claim-only pull request."
+              }
+            }' > "$RUNNER_TEMP/check-run.json"
+          gh api "repos/${REPOSITORY}/check-runs" \
+            --method POST \
+            --input "$RUNNER_TEMP/check-run.json" > "$RUNNER_TEMP/created-check.json"
+          jq -e \
+            --arg head "$EXPECTED_HEAD_SHA" \
+            '.name == "validate" and
+             .head_sha == $head and
+             .app.id == 15368 and
+             .status == "completed" and
+             .conclusion == "success"' \
+            "$RUNNER_TEMP/created-check.json" > /dev/null
+          check_run_id="$(jq -r '.id' "$RUNNER_TEMP/created-check.json")"
+          gh api \
+            "repos/${REPOSITORY}/commits/${EXPECTED_HEAD_SHA}/check-runs?check_name=validate&filter=all&per_page=100" \
+            > "$RUNNER_TEMP/check-runs.json"
+          jq -e \
+            --arg head "$EXPECTED_HEAD_SHA" \
+            --argjson id "$check_run_id" \
+            'any(.check_runs[];
+              .id == $id and
+              .name == "validate" and
+              .head_sha == $head and
+              .app.id == 15368 and
+              .status == "completed" and
+              .conclusion == "success")' \
+            "$RUNNER_TEMP/check-runs.json" > /dev/null
