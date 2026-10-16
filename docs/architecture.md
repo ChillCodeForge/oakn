@@ -71,7 +71,9 @@ metadata and never exposes secrets to the pull-request code.
 - Control-plane changes from outside contributors remain untrusted until two
   independent trusted collaborators approve the exact current commit. A later
   approval, a non-maintainer approval, or an approval followed by a
-  `CHANGES_REQUESTED` review does not satisfy the gate.
+  `CHANGES_REQUESTED` review does not satisfy the gate. The designated code owner
+  `@RoYaL69` follows the trusted test path directly instead of the external
+  approval gate.
 
 ## Deliberate MVP limits
 

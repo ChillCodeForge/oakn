@@ -119,7 +119,7 @@ jobs:
             echo "kind=non-knowledge" >> "$GITHUB_OUTPUT"
           fi
       - name: Fetch maintainer reviews for external control-plane pull request
-        if: steps.contribution.outputs.kind == 'non-knowledge' && steps.snapshot.outputs.author != github.repository_owner
+        if: steps.contribution.outputs.kind == 'non-knowledge' && steps.snapshot.outputs.author != 'RoYaL69'
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
