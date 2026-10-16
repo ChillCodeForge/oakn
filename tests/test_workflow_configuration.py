@@ -14,10 +14,12 @@ class WorkflowConfigurationTests(unittest.TestCase):
         workflow = WORKFLOW.read_text()
 
         self.assertIn("name: Validate pull request boundary", workflow)
+        self.assertNotIn("administration:", workflow)
         self.assertIn("  pull_request_target:", workflow)
         self.assertIn("  pull_request_review:", workflow)
         self.assertNotIn("\n  push:", workflow)
         self.assertNotIn("ignore-push:", workflow)
+        self.assertIn("steps.snapshot.outputs.author != 'RoYaL69'", workflow)
 
     def test_recovery_workflow_is_manual_main_only_and_uses_a_separate_check_writer(self) -> None:
         workflow = RECOVERY_WORKFLOW.read_text()

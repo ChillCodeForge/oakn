@@ -17,7 +17,8 @@ Public claim contributions and trusted code changes follow different paths:
   control-plane PRs need two independent approvals from collaborators with
   administrator, maintainer or write permission. Approvals must target the
   current commit; new commits or a later `CHANGES_REQUESTED` review require
-  approval again.
+  approval again. The designated code owner `@RoYaL69` runs the trusted tests
+  directly without the external-approval gate.
 - Control-plane validation runs without repository secrets and without write
   tokens. A green `validate` check means the relevant path passed the trusted
   boundary; it does not replace required CODEOWNER review.
