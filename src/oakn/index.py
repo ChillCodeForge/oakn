@@ -19,6 +19,13 @@ def build_index(claims_directory: str | Path, destination: str | Path) -> int:
     target.parent.mkdir(parents=True, exist_ok=True)
     if target.exists():
         target.unlink()
+    claim_data = [(path, json.loads(path.read_text())) for path in claim_paths]
+    superseded_ids = {
+        claim["lifecycle"]["supersedes"]
+        for _, claim in claim_data
+        if isinstance(claim.get("lifecycle"), dict)
+        and isinstance(claim["lifecycle"].get("supersedes"), str)
+    }
     connection = sqlite3.connect(target)
     try:
         connection.executescript(
@@ -32,20 +39,20 @@ def build_index(claims_directory: str | Path, destination: str | Path) -> int:
                 affected TEXT,
                 summary TEXT NOT NULL,
                 evidence_state TEXT NOT NULL,
+                is_superseded INTEGER NOT NULL,
                 claim_json TEXT NOT NULL
             );
             CREATE VIRTUAL TABLE claims_fts USING fts5(id UNINDEXED, summary, tokenize='unicode61');
             """
         )
-        for path in claim_paths:
-            claim = json.loads(path.read_text())
+        for _, claim in claim_data:
             package = claim["package"]
             claim_id = claim["id"]
             summary = claim["summary"]
             evidence_state = claim.get("verification", {}).get("source_binding", "unknown")
             package_type, package_base, _ = split_purl(package["purl"])
             connection.execute(
-                "INSERT INTO claims VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO claims VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     claim_id,
                     package["purl"],
@@ -55,6 +62,7 @@ def build_index(claims_directory: str | Path, destination: str | Path) -> int:
                     package.get("affected"),
                     summary,
                     evidence_state,
+                    int(claim_id in superseded_ids),
                     json.dumps(claim, sort_keys=True),
                 ),
             )
@@ -107,7 +115,9 @@ class ClaimIndex:
         try:
             return connection.execute(sql, parameters).fetchall()
         except sqlite3.OperationalError as error:
-            raise IndexError("local index predates version ranges; sync it again") from error
+            raise IndexError(
+                "local index predates current retrieval fields; sync it again"
+            ) from error
         finally:
             connection.close()
 
@@ -139,7 +149,7 @@ class ClaimIndex:
                    claims.package_type, claims.affected, bm25(claims_fts) AS rank
             FROM claims_fts
             JOIN claims ON claims.id = claims_fts.id
-            WHERE claims_fts MATCH ? AND claims.package = ?
+            WHERE claims_fts MATCH ? AND claims.package = ? AND claims.is_superseded = 0
             ORDER BY rank ASC, claims.id ASC
             """,
             (fts_query, package),
@@ -164,7 +174,7 @@ class ClaimIndex:
         rows = self._package_rows(
             """
             SELECT id, summary, purl, version, evidence_state, package_type, affected
-            FROM claims WHERE package = ? ORDER BY id
+            FROM claims WHERE package = ? AND is_superseded = 0 ORDER BY id
             """,
             (package,),
         )

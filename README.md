@@ -17,15 +17,16 @@ PYTHONPATH=src python3 -m oakn.mcp  # explicit stdio MCP server; no Hermes confi
 ```
 
 GitHub Actions runs the unit and integration suite on Python 3.12, 3.13, and
-3.14 for pull requests and pushes to `main`. A separate quality job checks
-Ruff linting and formatting plus Mypy types. Run the same checks locally with:
+3.14 for pull requests and pushes to `main`. Every job installs from `uv.lock`;
+the lockfile uses the public PyPI index and includes the pinned CI tool set.
+Run the same checks locally with:
 
 ```sh
-python3 -m pip install -e . mypy ruff
-python3 -m unittest discover -s tests -v
-ruff check .
-ruff format --check .
-mypy src
+uv sync --locked --all-groups
+uv run --locked --no-sync python -m unittest discover -s tests -v
+uv run --locked --no-sync ruff check .
+uv run --locked --no-sync ruff format --check .
+uv run --locked --no-sync mypy src
 ```
 
 The MCP exposes `resolve_project`, `search`, `get`, `contribute`, `record_outcome`,
@@ -111,15 +112,23 @@ build and stage a real claim.
 ## Quality and maintenance
 
 - `python scripts/evaluate_search.py evaluation/search-cases.json` measures
-  retrieval recall@3, mean reciprocal rank and hit rate against known-answer
-  queries. CI requires perfect recall@3 for this small regression set.
+  positive-case recall@3, mean reciprocal rank and hit rate, plus the
+  expected-empty negative-case pass rate. CI requires perfect recall@3 and
+  perfect negative-case pass rate, including affected-version boundaries.
 - `python scripts/audit_claims.py --max-age-days 365` reports claims that may
   need freshness review, broken `supersedes` links/cycles, and near-duplicate
   same-version claims for human review. It never edits canonical claims.
+- `python scripts/audit_evidence.py` periodically revalidates each claim's
+  immutable evidence hashes and package manifest against public upstream
+  sources. This proves the recorded binding, not that the evidence describes
+  the latest upstream behavior; the scheduled workflow is read-only and uses
+  no secrets.
 - Release-index generation is checked for byte-for-byte reproducibility,
   bundle checksums and SQLite integrity in the test suite.
 - Dependabot checks Python packages and GitHub Actions weekly; CI runs
-  `pip-audit` against installed runtime dependencies.
+  `pip-audit` against locked runtime and CI-tool dependencies. Workflow actions
+  are pinned to verified release commit SHAs, with release tags retained in
+  comments for Dependabot updates.
 
 For a tested clean-environment integration path, see
 [`docs/quickstart.md`](docs/quickstart.md).

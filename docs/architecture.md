@@ -33,17 +33,22 @@ metadata and never exposes secrets to the pull-request code.
 3. A miss is broadened through query variants, then package-only search. The
    miss response lists the package's claims as `package_candidates`, applying
    ones first, each flagged `applies_to_version`; a claim for another version
-   outside its range is a hint, never a hit. `checked` names exactly these
-   steps. Duplicate detection runs at contribution time, not during search.
+   outside its range is a hint, never a hit. Claims superseded by a newer
+   canonical claim remain available through historical `get`, but are omitted
+   from current text and package-candidate retrieval. `checked` names exactly
+   these steps. Duplicate detection runs at contribution time, not during search.
 4. A candidate constructed solely from public evidence is validated locally,
    staged as one claim file and optionally published as a GitHub PR.
 5. Trusted CI validates data-only changes. A merge to `main` rebuilds the
    SQLite index and release bundle. `sync` verifies its SHA-256 before atomically
    replacing the local index.
 6. Known-answer retrieval cases track recall@k, mean reciprocal rank and hit
-   rate. A read-only lifecycle audit reports aging claims, broken supersession
-   links and possible same-version conflicts for human review; it never mutates
-   canonical claim data.
+   rate; expected-empty negative cases track false retrievals and version
+   boundaries. A read-only lifecycle audit reports aging claims, broken
+   supersession links and possible same-version conflicts for human review.
+   A scheduled evidence audit refetches immutable source/manifests to verify
+   their recorded hashes and package identity; it does not claim to prove
+   upstream freshness. These audits never mutate canonical claim data.
 
 ## Trust and security decisions
 
