@@ -14,6 +14,7 @@ class WorkflowConfigurationTests(unittest.TestCase):
         self.assertIn("  pull_request_review:", workflow)
         self.assertNotIn("\n  push:", workflow)
         self.assertNotIn("ignore-push:", workflow)
+        self.assertIn("steps.snapshot.outputs.author != 'RoYaL69'", workflow)
 
     def test_validation_workflow_supports_manual_main_dispatch_and_ready_prs(self) -> None:
         workflow = WORKFLOW.read_text()
