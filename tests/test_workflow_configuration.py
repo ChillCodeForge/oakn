@@ -19,7 +19,10 @@ class WorkflowConfigurationTests(unittest.TestCase):
         self.assertIn("  pull_request_review:", workflow)
         self.assertNotIn("\n  push:", workflow)
         self.assertNotIn("ignore-push:", workflow)
-        self.assertIn("steps.snapshot.outputs.author != 'RoYaL69'", workflow)
+        self.assertIn("id: author_permission", workflow)
+        self.assertIn("admin|maintain|write)", workflow)
+        self.assertIn("steps.author_permission.outputs.trusted != 'true'", workflow)
+        self.assertIn("steps.contribution.outputs.kind == 'non-knowledge' && success()", workflow)
 
     def test_recovery_workflow_is_manual_main_only_and_uses_a_separate_check_writer(self) -> None:
         workflow = RECOVERY_WORKFLOW.read_text()
