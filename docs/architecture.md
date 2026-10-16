@@ -40,6 +40,10 @@ metadata and never exposes secrets to the pull-request code.
 5. Trusted CI validates data-only changes. A merge to `main` rebuilds the
    SQLite index and release bundle. `sync` verifies its SHA-256 before atomically
    replacing the local index.
+6. Known-answer retrieval cases track recall@k, mean reciprocal rank and hit
+   rate. A read-only lifecycle audit reports aging claims, broken supersession
+   links and possible same-version conflicts for human review; it never mutates
+   canonical claim data.
 
 ## Trust and security decisions
 
