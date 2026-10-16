@@ -107,3 +107,19 @@ See `docs/architecture.md` for trust decisions and `docs/agent-rule.md` for the
 agent loop. See `docs/contributing-claims.md` for a practical, ecosystem-by-
 ecosystem walkthrough of what tends to trip people up the first time they
 build and stage a real claim.
+
+## Quality and maintenance
+
+- `python scripts/evaluate_search.py evaluation/search-cases.json` measures
+  retrieval recall@3, mean reciprocal rank and hit rate against known-answer
+  queries. CI requires perfect recall@3 for this small regression set.
+- `python scripts/audit_claims.py --max-age-days 365` reports claims that may
+  need freshness review, broken `supersedes` links/cycles, and near-duplicate
+  same-version claims for human review. It never edits canonical claims.
+- Release-index generation is checked for byte-for-byte reproducibility,
+  bundle checksums and SQLite integrity in the test suite.
+- Dependabot checks Python packages and GitHub Actions weekly; CI runs
+  `pip-audit` against installed runtime dependencies.
+
+For a tested clean-environment integration path, see
+[`docs/quickstart.md`](docs/quickstart.md).

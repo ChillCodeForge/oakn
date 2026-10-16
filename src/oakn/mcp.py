@@ -57,9 +57,10 @@ def create_mcp_server(
     index_path: Path,
     claims_directory: Path,
     publisher: DraftPullRequestPublisher | None = None,
+    allow_file_urls: bool = False,
 ) -> MCPServer:
     """Create an opt-in, local stdio MCP server; it changes no Hermes config."""
-    client = KnowledgeClient(index_path)
+    client = KnowledgeClient(index_path, allow_file_urls=allow_file_urls)
     draft_publisher = publisher or DraftPullRequestPublisher()
     server = MCPServer(
         name="oakn",
@@ -143,7 +144,8 @@ def main() -> None:
     root = Path.cwd()
     index = Path(os.environ.get("OAKN_INDEX_PATH", root / ".oakn" / "session-index.sqlite"))
     claims = Path(os.environ.get("OAKN_CLAIMS_DIR", root / "knowledge" / "claims"))
-    create_mcp_server(index, claims).run(transport="stdio")
+    allow_file_urls = os.environ.get("OAKN_ALLOW_FILE_URLS") == "1"
+    create_mcp_server(index, claims, allow_file_urls=allow_file_urls).run(transport="stdio")
 
 
 if __name__ == "__main__":

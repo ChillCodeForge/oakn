@@ -22,6 +22,11 @@ Public claim contributions and trusted code changes follow different paths:
 - Control-plane validation runs without repository secrets and without write
   tokens. A green `validate` check means the relevant path passed the trusted
   boundary; it does not replace required CODEOWNER review.
+- Claims are immutable after merge. Run `python scripts/audit_claims.py` to
+  identify claims that may need a freshness review, invalid supersession links
+  or near-duplicate same-version statements. The report is advisory and never
+  rewrites claim files; submit a new claim with `lifecycle.supersedes` when a
+  correction should replace an older claim.
 
 If a claim PR is rejected as a control-plane change, inspect the changed-path
 list first. A claim PR with more than the one new claim JSON file must be split

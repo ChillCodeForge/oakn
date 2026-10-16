@@ -35,6 +35,10 @@ jobs:
         run: python -m pip install -e .
       - name: Run unit and integration tests
         run: python -m unittest discover -s tests -v
+      - name: Evaluate retrieval quality
+        run: python scripts/evaluate_search.py evaluation/search-cases.json --minimum-recall-at-k 1.0
+      - name: Audit claim lifecycle
+        run: python scripts/audit_claims.py --max-age-days 365
 
   quality:
     name: Lint, format, and type checks
@@ -56,3 +60,20 @@ jobs:
         run: ruff format --check .
       - name: Check types
         run: mypy src
+
+  dependency-audit:
+    name: Audit runtime dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install project and audit tool
+        run: python -m pip install -e . pip-audit
+      - name: Audit Python dependencies
+        run: pip-audit --skip-editable
