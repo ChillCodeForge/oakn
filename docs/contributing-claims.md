@@ -26,7 +26,11 @@ Public claim contributions and trusted code changes follow different paths:
   identify claims that may need a freshness review, invalid supersession links
   or near-duplicate same-version statements. The report is advisory and never
   rewrites claim files; submit a new claim with `lifecycle.supersedes` when a
-  correction should replace an older claim.
+  correction should replace an older claim. Superseded claims remain available
+  through historical lookup but are omitted from current search results.
+- The scheduled read-only evidence audit checks source and package-manifest
+  hashes at their immutable Git commits. A successful binding check does not
+  establish that the claim still reflects the latest upstream behavior.
 
 If a claim PR is rejected as a control-plane change, inspect the changed-path
 list first. A claim PR with more than the one new claim JSON file must be split

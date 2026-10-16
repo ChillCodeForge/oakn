@@ -24,56 +24,68 @@ jobs:
         python-version: ["3.12", "3.13", "3.14"]
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ matrix.python-version }}
-          cache: pip
-          cache-dependency-path: pyproject.toml
-      - name: Install project
-        run: python -m pip install -e .
+      - name: Set up locked uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: 0.13.1
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - name: Install locked dependencies
+        run: uv sync --locked --all-groups
       - name: Run unit and integration tests
-        run: python -m unittest discover -s tests -v
+        run: uv run --locked --no-sync python -m unittest discover -s tests -v
       - name: Evaluate retrieval quality
-        run: python scripts/evaluate_search.py evaluation/search-cases.json --minimum-recall-at-k 1.0
+        run: uv run --locked --no-sync python scripts/evaluate_search.py evaluation/search-cases.json --minimum-recall-at-k 1.0 --minimum-negative-case-pass-rate 1.0
       - name: Audit claim lifecycle
-        run: python scripts/audit_claims.py --max-age-days 365
+        run: uv run --locked --no-sync python scripts/audit_claims.py --max-age-days 365
 
   quality:
     name: Lint, format, and type checks
     runs-on: ubuntu-latest
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
-          cache: pip
-          cache-dependency-path: pyproject.toml
-      - name: Install project and quality tools
-        run: python -m pip install -e . mypy ruff
+      - name: Set up locked uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: 0.13.1
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - name: Install locked dependencies
+        run: uv sync --locked --all-groups
       - name: Check lint
-        run: ruff check .
+        run: uv run --locked --no-sync ruff check .
       - name: Check formatting
-        run: ruff format --check .
+        run: uv run --locked --no-sync ruff format --check .
       - name: Check types
-        run: mypy src
+        run: uv run --locked --no-sync mypy src
 
   dependency-audit:
-    name: Audit runtime dependencies
+    name: Audit locked Python dependencies
     runs-on: ubuntu-latest
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
-          cache: pip
-          cache-dependency-path: pyproject.toml
-      - name: Install project and audit tool
-        run: python -m pip install -e . pip-audit
+      - name: Set up locked uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: 0.13.1
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - name: Install locked dependencies
+        run: uv sync --locked --all-groups
       - name: Audit Python dependencies
-        run: pip-audit --skip-editable
+        run: uv run --locked --no-sync pip-audit --skip-editable
