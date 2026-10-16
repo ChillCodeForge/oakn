@@ -16,6 +16,18 @@ PYTHONPATH=src python3 -m oakn.cli record-outcome <claim-id> --index local-data/
 PYTHONPATH=src python3 -m oakn.mcp  # explicit stdio MCP server; no Hermes config changes
 ```
 
+GitHub Actions runs the unit and integration suite on Python 3.12, 3.13, and
+3.14 for pull requests and pushes to `main`. A separate quality job checks
+Ruff linting and formatting plus Mypy types. Run the same checks locally with:
+
+```sh
+python3 -m pip install -e . mypy ruff
+python3 -m unittest discover -s tests -v
+ruff check .
+ruff format --check .
+mypy src
+```
+
 The MCP exposes `resolve_project`, `search`, `get`, `contribute`, `record_outcome`,
 `sync`, and `validate_candidate`. `search(query, purl, version, topic=None)`
 takes the package purl with or without its version (`pkg:npm/p-limit` or
