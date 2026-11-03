@@ -46,6 +46,9 @@ class WorkflowConfigurationTests(unittest.TestCase):
         self.assertNotIn("ignore-push:", workflow)
         self.assertIn("id: author_permission", workflow)
         self.assertIn("admin|maintain|write)", workflow)
+        self.assertIn("none|pull|triage|read)", workflow)
+        self.assertIn("jq -rn --arg login \"$AUTHOR\" '$login | @uri'", workflow)
+        self.assertIn("jq -rn --arg login \"$login\" '$login | @uri'", workflow)
         self.assertIn("steps.author_permission.outputs.trusted != 'true'", workflow)
         self.assertIn("steps.contribution.outputs.kind == 'non-knowledge' && success()", workflow)
 
