@@ -68,9 +68,9 @@ OAKN distinguishes between two kinds of pull requests:
   validators, scripts, source code or policies. Repository collaborators with
   administrator, maintainer or write permission can run the trusted test path
   directly. External contributors may propose these changes, but the trusted
-  tests run only after two independent collaborators approve the exact current
-  commit. A later `CHANGES_REQUESTED` review or a new commit invalidates those
-  approvals.
+  tests run only after one trusted collaborator approves the exact current
+  commit. A later `CHANGES_REQUESTED` review or a new commit invalidates that
+  approval.
 
 Control-plane tests run in an isolated job without repository secrets or write
 tokens. The `validate` check must pass before merging, and protected paths also

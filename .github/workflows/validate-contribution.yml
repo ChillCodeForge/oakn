@@ -127,11 +127,12 @@ jobs:
           AUTHOR: ${{ steps.snapshot.outputs.author }}
         run: |
           set -euo pipefail
+          author_path="$(jq -rn --arg login "$AUTHOR" '$login | @uri')"
           response=$(curl --silent --show-error --location \
             --header "Accept: application/vnd.github+json" \
             --header "Authorization: Bearer ${GH_TOKEN}" \
             --write-out $'\n%{http_code}' \
-            "https://api.github.com/repos/${REPOSITORY}/collaborators/${AUTHOR}/permission")
+            "https://api.github.com/repos/${REPOSITORY}/collaborators/${author_path}/permission")
           status="${response##*$'\n'}"
           body="${response%$'\n'*}"
           if [[ "$status" == "404" ]]; then
@@ -146,7 +147,7 @@ jobs:
             admin|maintain|write)
               echo "trusted=true" >> "$GITHUB_OUTPUT"
               ;;
-            pull|triage|read)
+            none|pull|triage|read)
               echo "trusted=false" >> "$GITHUB_OUTPUT"
               ;;
             *)
@@ -172,11 +173,12 @@ jobs:
             sort -u > "$RUNNER_TEMP/reviewers.txt"
           : > "$RUNNER_TEMP/permissions.jsonl"
           while IFS= read -r login; do
+            login_path="$(jq -rn --arg login "$login" '$login | @uri')"
             response=$(curl --silent --show-error --location \
               --header "Accept: application/vnd.github+json" \
               --header "Authorization: Bearer ${GH_TOKEN}" \
               --write-out $'\n%{http_code}' \
-              "https://api.github.com/repos/${REPOSITORY}/collaborators/${login}/permission")
+              "https://api.github.com/repos/${REPOSITORY}/collaborators/${login_path}/permission")
             status="${response##*$'\n'}"
             body="${response%$'\n'*}"
             if [[ "$status" == "404" ]]; then
