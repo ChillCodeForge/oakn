@@ -473,14 +473,14 @@ requires-dist = [
 
 [[package]]
 name = "opentelemetry-api"
-version = "1.44.0"
+version = "1.45.2"
 source = { registry = "https://artifacts.chillcode.de/pypi/pypi-virtual/simple" }
 dependencies = [
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://artifacts.chillcode.de/pypi/pypi-virtual/simple/opentelemetry-api/opentelemetry_api-1.44.0.tar.gz", hash = "sha256:67647e5e9566edcf421166fdf022b3537f818635daa852b289e34604dc6fb33a", size = 72406, upload-time = "2026-07-16T15:25:32.678Z" }
+sdist = { url = "https://artifacts.chillcode.de/pypi/pypi-virtual/simple/opentelemetry-api/opentelemetry_api-1.45.2.tar.gz", hash = "sha256:d7b0008e21e5fd61cbe7a7f34ca3b6905a78ab677d9bc395e299359c75cda6b4", size = 73277, upload-time = "2026-10-29T17:29:37.888Z" }
 wheels = [
-    { url = "https://artifacts.chillcode.de/pypi/pypi-virtual/simple/opentelemetry-api/opentelemetry_api-1.44.0-py3-none-any.whl", hash = "sha256:94b98c893a91b88657eaac1e3ba89618cdb85be6918196705354f34728b2cdef", size = 60018, upload-time = "2026-07-16T15:25:11.657Z" },
+    { url = "https://artifacts.chillcode.de/pypi/pypi-virtual/simple/opentelemetry-api/opentelemetry_api-1.45.2-py3-none-any.whl", hash = "sha256:2cbd737377e710ee740d261c94e93fa0f08e6d037c18f17513cc0a2d94479a34", size = 60335, upload-time = "2026-10-29T17:29:06.955Z" },
 ]
 
 [[package]]
