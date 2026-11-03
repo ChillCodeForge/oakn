@@ -54,16 +54,15 @@ def main() -> int:
     parser.add_argument("--reviews", type=Path, required=True)
     parser.add_argument("--collaborators", type=Path, required=True)
     parser.add_argument("--head-sha", required=True)
-    parser.add_argument("--minimum", type=int, default=2)
     arguments = parser.parse_args()
 
     reviewers = approved_maintainers(
         _load(arguments.reviews), _load(arguments.collaborators), arguments.head_sha
     )
-    if len(reviewers) < arguments.minimum:
+    if not reviewers:
         print(
-            f"control-plane changes require {arguments.minimum} independent maintainer "
-            f"approvals for the current commit; found {len(reviewers)}",
+            "control-plane changes require one trusted maintainer approval "
+            "for the current commit; found 0",
             file=sys.stderr,
         )
         return 1

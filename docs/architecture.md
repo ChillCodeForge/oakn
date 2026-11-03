@@ -17,7 +17,7 @@ and CODEOWNERS are documented as required repository settings because
 GitHub cannot make a repository file self-protecting without a protected default
 branch. Control-plane pull requests from collaborators with write, maintain, or
 admin permission run the trusted test path directly. Other contributors require
-two independent collaborator approvals for the current commit before the trusted
+one trusted collaborator approval for the current commit before the trusted
 test path runs. The workflow uses only GitHub API
 metadata and never exposes secrets to the pull-request code.
 

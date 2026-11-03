@@ -37,7 +37,7 @@ def run_check(
 
 
 class ControlPlaneApprovalTests(unittest.TestCase):
-    def test_requires_two_distinct_trusted_approvals_for_current_head(self) -> None:
+    def test_one_trusted_approval_for_current_head_passes_by_default(self) -> None:
         result = run_check(
             [
                 {
@@ -47,20 +47,19 @@ class ControlPlaneApprovalTests(unittest.TestCase):
                     "commit_id": HEAD,
                     "submitted_at": "2026-01-01T00:00:00Z",
                 },
-                {
-                    "id": 2,
-                    "user": {"login": "maintainer"},
-                    "state": "APPROVED",
-                    "commit_id": HEAD,
-                    "submitted_at": "2026-01-01T00:01:00Z",
-                },
             ],
             [
                 {"login": "owner", "permissions": {"admin": True}},
-                {"login": "maintainer", "permissions": {"maintain": True}},
             ],
         )
         self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_rejects_when_no_trusted_approval_exists(self) -> None:
+        result = run_check(
+            [],
+            [{"login": "owner", "permissions": {"admin": True}}],
+        )
+        self.assertNotEqual(result.returncode, 0)
 
     def test_rejects_old_approval_and_untrusted_reviewer(self) -> None:
         result = run_check(
@@ -87,7 +86,7 @@ class ControlPlaneApprovalTests(unittest.TestCase):
         )
         self.assertNotEqual(result.returncode, 0)
 
-    def test_latest_review_for_a_maintainer_must_be_approval(self) -> None:
+    def test_latest_review_must_be_approval(self) -> None:
         result = run_check(
             [
                 {
@@ -99,14 +98,14 @@ class ControlPlaneApprovalTests(unittest.TestCase):
                 },
                 {
                     "id": 2,
-                    "user": {"login": "maintainer"},
+                    "user": {"login": "owner"},
                     "state": "APPROVED",
                     "commit_id": HEAD,
                     "submitted_at": "2026-01-01T00:01:00Z",
                 },
                 {
                     "id": 3,
-                    "user": {"login": "maintainer"},
+                    "user": {"login": "owner"},
                     "state": "CHANGES_REQUESTED",
                     "commit_id": HEAD,
                     "submitted_at": "2026-01-01T00:02:00Z",
@@ -114,7 +113,6 @@ class ControlPlaneApprovalTests(unittest.TestCase):
             ],
             [
                 {"login": "owner", "permissions": {"admin": True}},
-                {"login": "maintainer", "permissions": {"push": True}},
             ],
         )
         self.assertNotEqual(result.returncode, 0)
@@ -137,17 +135,9 @@ class ControlPlaneApprovalTests(unittest.TestCase):
                     "commit_id": HEAD,
                     "submitted_at": timestamp,
                 },
-                {
-                    "id": 3,
-                    "user": {"login": "maintainer"},
-                    "state": "APPROVED",
-                    "commit_id": HEAD,
-                    "submitted_at": timestamp,
-                },
             ],
             [
                 {"login": "owner", "permissions": {"admin": True}},
-                {"login": "maintainer", "permissions": {"push": True}},
             ],
         )
         self.assertNotEqual(result.returncode, 0)

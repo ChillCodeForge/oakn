@@ -16,7 +16,7 @@ Public claim contributions and trusted code changes follow different paths:
   `src/`, `schemas/` or repository policy. Collaborators with administrator,
   maintainer or write permission run the trusted tests directly without the
   external-approval gate. Other contributors may propose control-plane changes,
-  but the tests require two independent collaborator approvals for the current
+  but the tests require one trusted collaborator approval for the current
   commit. New commits or a later `CHANGES_REQUESTED` review require approval
   again.
 - Control-plane validation runs without repository secrets and without write
