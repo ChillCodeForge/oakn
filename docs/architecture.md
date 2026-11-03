@@ -74,8 +74,8 @@ metadata and never exposes secrets to the pull-request code.
 - Executable verification has a state in the claim model but no fixture runner in
   this MVP; untrusted fixture code is therefore never executed.
 - Control-plane changes from outside contributors remain untrusted until one
-  trusted collaborator approves the exact current commit. A later
-  approval, a non-maintainer approval, or an approval followed by a
+  trusted collaborator approves the exact current commit. An approval for an
+  older commit, a non-maintainer approval, or an approval followed by a
   `CHANGES_REQUESTED` review does not satisfy the gate. Trusted collaborators
   with write-level access follow the test path directly instead of the external
   approval gate.
