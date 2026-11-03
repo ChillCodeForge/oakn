@@ -61,7 +61,7 @@ class ControlPlaneApprovalTests(unittest.TestCase):
         )
         self.assertNotEqual(result.returncode, 0)
 
-    def test_rejects_old_approval_and_untrusted_reviewer(self) -> None:
+    def test_rejects_only_old_approval(self) -> None:
         result = run_check(
             [
                 {
@@ -71,18 +71,23 @@ class ControlPlaneApprovalTests(unittest.TestCase):
                     "commit_id": "b" * 40,
                     "submitted_at": "2026-01-01T00:00:00Z",
                 },
+            ],
+            [{"login": "owner", "permissions": {"admin": True}}],
+        )
+        self.assertNotEqual(result.returncode, 0)
+
+    def test_rejects_only_untrusted_current_approval(self) -> None:
+        result = run_check(
+            [
                 {
-                    "id": 2,
+                    "id": 1,
                     "user": {"login": "random"},
                     "state": "APPROVED",
                     "commit_id": HEAD,
-                    "submitted_at": "2026-01-01T00:01:00Z",
+                    "submitted_at": "2026-01-01T00:00:00Z",
                 },
             ],
-            [
-                {"login": "owner", "permissions": {"admin": True}},
-                {"login": "random", "permissions": {"pull": True}},
-            ],
+            [{"login": "random", "permissions": {"pull": True}}],
         )
         self.assertNotEqual(result.returncode, 0)
 
