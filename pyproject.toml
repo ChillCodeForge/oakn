@@ -10,6 +10,9 @@ requires-python = ">=3.12"
 dependencies = ["defusedxml>=0.7.1", "mcp>=2.2,<3", "requests>=2.32.0", "univers>=32.0.1"]
 license = { text = "Apache-2.0" }
 
+[dependency-groups]
+dev = ["mypy>=1.13", "pip-audit>=2.9", "ruff>=0.14"]
+
 [project.scripts]
 oakn = "oakn.cli:main"
 oakn-mcp = "oakn.mcp:main"

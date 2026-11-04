@@ -20,11 +20,16 @@ def main() -> int:
     parser.add_argument("--claims", type=Path, default=Path("knowledge/claims"))
     parser.add_argument("-k", type=int, default=3)
     parser.add_argument("--minimum-recall-at-k", type=float)
+    parser.add_argument("--minimum-negative-case-pass-rate", type=float)
     arguments = parser.parse_args()
     if arguments.minimum_recall_at_k is not None and not (
         0.0 <= arguments.minimum_recall_at_k <= 1.0
     ):
         parser.error("--minimum-recall-at-k must be between 0 and 1")
+    if arguments.minimum_negative_case_pass_rate is not None and not (
+        0.0 <= arguments.minimum_negative_case_pass_rate <= 1.0
+    ):
+        parser.error("--minimum-negative-case-pass-rate must be between 0 and 1")
     cases = json.loads(arguments.cases.read_text())
     with tempfile.TemporaryDirectory() as directory:
         index_path = Path(directory) / "evaluation.sqlite"
@@ -35,6 +40,19 @@ def main() -> int:
     if arguments.minimum_recall_at_k is not None and report[metric] < arguments.minimum_recall_at_k:
         print(
             f"{metric} {report[metric]:.4f} is below {arguments.minimum_recall_at_k:.4f}",
+            file=sys.stderr,
+        )
+        return 1
+    negative_rate = report["negative_case_pass_rate"]
+    if (
+        arguments.minimum_negative_case_pass_rate is not None
+        and negative_rate is not None
+        and negative_rate < arguments.minimum_negative_case_pass_rate
+    ):
+        print(
+            "negative_case_pass_rate "
+            f"{negative_rate:.4f} is below "
+            f"{arguments.minimum_negative_case_pass_rate:.4f}",
             file=sys.stderr,
         )
         return 1

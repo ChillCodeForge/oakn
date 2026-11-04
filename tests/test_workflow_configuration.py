@@ -7,9 +7,34 @@ WORKFLOW = Path(__file__).parents[1] / ".github" / "workflows" / "validate-contr
 RECOVERY_WORKFLOW = (
     Path(__file__).parents[1] / ".github" / "workflows" / "recover-claim-validation.yml"
 )
+CI_WORKFLOW = Path(__file__).parents[1] / ".github" / "workflows" / "ci.yml"
+EVIDENCE_WORKFLOW = Path(__file__).parents[1] / ".github" / "workflows" / "evidence-audit.yml"
 
 
 class WorkflowConfigurationTests(unittest.TestCase):
+    def test_ci_installs_locked_dependencies_and_pins_actions_to_release_commits(self) -> None:
+        workflow = CI_WORKFLOW.read_text()
+
+        self.assertIn("uv sync --locked --all-groups", workflow)
+        self.assertNotIn("pip install", workflow)
+        self.assertIn("--minimum-negative-case-pass-rate 1.0", workflow)
+        for action in ("actions/checkout", "actions/setup-python", "astral-sh/setup-uv"):
+            with self.subTest(action=action):
+                self.assertRegex(
+                    workflow,
+                    rf"uses: {action}@[0-9a-f]{{40}} # v[0-9]+\.[0-9]+\.[0-9]+",
+                )
+
+    def test_evidence_audit_is_scheduled_read_only_and_uses_locked_tools(self) -> None:
+        workflow = EVIDENCE_WORKFLOW.read_text()
+
+        self.assertIn("  schedule:", workflow)
+        self.assertIn("  workflow_dispatch:", workflow)
+        self.assertIn("  contents: read", workflow)
+        self.assertIn("uv sync --locked --all-groups", workflow)
+        self.assertIn("scripts/audit_evidence.py", workflow)
+        self.assertNotIn("secrets.", workflow)
+
     def test_validation_workflow_is_pr_only_and_keeps_required_check_name(self) -> None:
         workflow = WORKFLOW.read_text()
 

@@ -7,6 +7,27 @@
     "expected_claim_ids": ["9a9c2a7b-4c4c-4a0e-9d84-2e1a6a0c7f31"]
   },
   {
+    "name": "undici affected-range lower boundary",
+    "query": "unrequested WebSocket subprotocol denial of service",
+    "purl": "pkg:npm/undici",
+    "version": "8.0.0",
+    "expected_claim_ids": ["9a9c2a7b-4c4c-4a0e-9d84-2e1a6a0c7f31"]
+  },
+  {
+    "name": "undici version below affected range",
+    "query": "unrequested WebSocket subprotocol denial of service",
+    "purl": "pkg:npm/undici",
+    "version": "7.9.0",
+    "expected_no_results": true
+  },
+  {
+    "name": "undici fixed version outside affected range",
+    "query": "unrequested WebSocket subprotocol denial of service",
+    "purl": "pkg:npm/undici",
+    "version": "8.10.3",
+    "expected_no_results": true
+  },
+  {
     "name": "fastify stream backpressure",
     "query": "Web Stream backpressure unbounded memory buffering",
     "purl": "pkg:npm/fastify",

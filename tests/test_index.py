@@ -8,6 +8,43 @@ from oakn.index import ClaimIndex, IndexError, build_index
 
 
 class IndexRetrievalTests(unittest.TestCase):
+    def test_search_hides_superseded_claims_but_get_keeps_history(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            claims = root / "knowledge" / "claims"
+            claims.mkdir(parents=True)
+            old_id = "11111111-1111-4111-8111-111111111111"
+            new_id = "22222222-2222-4222-8222-222222222222"
+            old_claim = {
+                "id": old_id,
+                "package": {"purl": "pkg:npm/example@1.0.0", "version": "1.0.0"},
+                "summary": "example library handles streamed requests",
+                "lifecycle": {"supersedes": None},
+            }
+            new_claim = {
+                "id": new_id,
+                "package": {"purl": "pkg:npm/example@1.1.0", "version": "1.1.0"},
+                "summary": "example library handles streamed requests safely",
+                "lifecycle": {"supersedes": old_id},
+            }
+            (claims / f"{old_id}.json").write_text(json.dumps(old_claim))
+            (claims / f"{new_id}.json").write_text(json.dumps(new_claim))
+            index_path = root / "index.sqlite"
+            build_index(claims, index_path)
+            index = ClaimIndex(index_path)
+
+            historical_search_results = index.search(
+                "streamed requests", "pkg:npm/example", "1.0.0"
+            )
+            current_search_results = index.search("streamed requests", "pkg:npm/example", "1.1.0")
+            package_results = index.package_claims("pkg:npm/example", "1.1.0")
+            historical_claim = index.get(old_id)
+
+        self.assertEqual(historical_search_results, [])
+        self.assertEqual([result["claim_id"] for result in current_search_results], [new_id])
+        self.assertEqual([result["claim_id"] for result in package_results], [new_id])
+        self.assertEqual(historical_claim["claim"]["id"], old_id)
+
     def test_search_filters_exact_package_version_before_bm25(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
